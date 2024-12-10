@@ -27,6 +27,12 @@ class BatchStageArrivalEvent(BaseEvent):
             self._replica_id, self._stage_id
         ).add_batch(self._batch)
 
+        with open("events.txt", "a") as f:
+            f.write(
+                f"BatchStageArrivalEvent ({self._id}): time={self.time}, replica_id={self._replica_id}, "
+                f"stage_id={self._stage_id}, batch_id={self._batch.id}"
+            )
+            f.write("\n")
         return [
             ReplicaStageScheduleEvent(
                 self.time,

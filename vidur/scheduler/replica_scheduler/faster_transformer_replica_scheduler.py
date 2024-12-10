@@ -1,4 +1,6 @@
-from vidur.entities.batch import Batch
+from typing import List
+
+from vidur.entities.batch import Batch, Request
 from vidur.scheduler.replica_scheduler.base_replica_scheduler import (
     BaseReplicaScheduler,
 )
@@ -12,7 +14,7 @@ class FasterTransformerReplicaScheduler(BaseReplicaScheduler):
         self._num_running_batches = 0
         self._pending_free_map = {}
 
-    def on_batch_end(self, batch: Batch) -> None:
+    def on_batch_end(self, batch: Batch) -> List[Request]:
         self._num_running_batches -= 1
 
         if batch.all_requests_completed:
@@ -21,6 +23,7 @@ class FasterTransformerReplicaScheduler(BaseReplicaScheduler):
             self.free(*self._pending_free_map.pop(batch.id, []))
         else:
             self._preempted_batches.append(batch)
+        return []
 
     def _generate_next_batch_from_preempted(self, preempted_batch: Batch) -> Batch:
         requests = []

@@ -25,7 +25,7 @@ class LightLLMReplicaScheduler(BaseReplicaScheduler):
         self._cache_len_list = []
         self._num_waiting_iters = 0
 
-    def on_batch_end(self, batch: Batch) -> None:
+    def on_batch_end(self, batch: Batch) -> List[Request]:
         self._num_running_batches -= 1
 
         for request in batch.requests:
@@ -33,6 +33,7 @@ class LightLLMReplicaScheduler(BaseReplicaScheduler):
                 self.free(request.id)
             else:
                 self._preempted_requests.append(request)
+        return []
 
     def _get_tuple_tokens(self, request: Request) -> Tuple[int, int]:
         if request.scheduled:

@@ -9,9 +9,12 @@ from vidur.types import EventType
 logger = init_logger(__name__)
 
 
-class GlobalScheduleEvent(BaseEvent):
+class GlobalScheduleDecodeEvent(BaseEvent):
+    """
+    This Event class is specifically for Splitwise
+    """
     def __init__(self, time: float):
-        super().__init__(time, EventType.GLOBAL_SCHEDULE)
+        super().__init__(time, EventType.GLOBAL_SCHEDULE_DECODE)
 
         self._replica_set = []
         self._request_mapping = []
@@ -22,14 +25,14 @@ class GlobalScheduleEvent(BaseEvent):
         from vidur.events.replica_schedule_event import ReplicaScheduleEvent
 
         self._replica_set = set()
-        self._request_mapping = scheduler.schedule()
+        self._request_mapping = scheduler.schedule_decode()
 
         for replica_id, request in self._request_mapping:
             self._replica_set.add(replica_id)
             scheduler.get_replica_scheduler(replica_id).add_request(request)
 
         with open("events.txt", "a") as f:
-            f.write(f"GlobalScheduleEvent ({self._id}) at time {self.time}: Scheduled {len(self._request_mapping)} requests across {len(self._replica_set)} replicas.")
+            f.write(f"GlobalScheduleDecode Event ({self._id}) at time {self.time}: Scheduled {len(self._request_mapping)} requests across {len(self._replica_set)} replicas.")
             f.write("\n")
 
         return [

@@ -9,8 +9,9 @@ from vidur.config import (
 from vidur.entities import Batch, Replica, Request
 from vidur.execution_time_predictor import BaseExecutionTimePredictor
 from vidur.logger import init_logger
-from vidur.scheduler.replica_stage_scheduler import ReplicaStageScheduler
+from vidur.scheduler.replica_stage_scheduler import ReplicaStageScheduler, SplitwiseReplicaStageScheduler
 from vidur.scheduler.utils.memory_planner import MemoryPlanner
+from vidur.types.replica_scheduler_type import ReplicaSchedulerType
 
 logger = init_logger(__name__)
 
@@ -54,15 +55,28 @@ class BaseReplicaScheduler(ABC):
         self._num_allocated_blocks = 0
         self._allocation_map = {}
 
-        self._replica_stage_schedulers = {
-            stage_id: ReplicaStageScheduler(
-                replica.id,
-                stage_id,
-                stage_id == num_stages - 1,
-                execution_time_predictor,
-            )
-            for stage_id in range(num_stages)
-        }
+        if self._config.get_type() != ReplicaSchedulerType.SPLITWISE:
+            print("Not Splitwise")
+            self._replica_stage_schedulers = {
+                stage_id: ReplicaStageScheduler(
+                    replica.id,
+                    stage_id,
+                    stage_id == num_stages - 1,
+                    execution_time_predictor,
+                )
+                for stage_id in range(num_stages)
+            }
+        else:
+            self._replica_stage_schedulers = {
+                stage_id: SplitwiseReplicaStageScheduler(
+                    replica.id,
+                    stage_id,
+                    stage_id == num_stages - 1,
+                    execution_time_predictor,
+                )
+                for stage_id in range(num_stages)
+            }
+            
 
     @property
     def num_pending_requests(self) -> int:
@@ -99,7 +113,10 @@ class BaseReplicaScheduler(ABC):
         return request.num_prefill_tokens
 
     def add_request(self, request: Request) -> None:
-        self._request_queue.append(request)
+        if not any(req._id == request._id for req in self._request_queue):
+            self._request_queue.append(request)
+        # else:
+        #     print("Request already in queue for replica scheduler ", self._replica_id)
 
     def get_replica_stage_scheduler(self, stage_id: int):
         return self._replica_stage_schedulers[stage_id]
@@ -127,7 +144,7 @@ class BaseReplicaScheduler(ABC):
         self.free(*batch.request_ids)
 
     @abstractmethod
-    def on_batch_end(self, batch: Batch) -> None:
+    def on_batch_end(self, batch: Batch) -> List[Request]:
         pass
 
     @abstractmethod

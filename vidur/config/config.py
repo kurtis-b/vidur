@@ -327,6 +327,21 @@ class SarathiSchedulerConfig(BaseReplicaSchedulerConfig):
     def get_type():
         return ReplicaSchedulerType.SARATHI
 
+@dataclass
+class SplitwiseSchedulerConfig(BaseReplicaSchedulerConfig):
+    pd_node_ratio: int = field(
+        default=0.5,
+        metadata={"help": "PD node ratio for splitwise."},
+    )
+
+    max_tokens_in_batch: int = field(
+        default=4096,
+        metadata={"help": "Maximum tokens in batch for vLLM."},
+    )
+
+    @staticmethod
+    def get_type():
+        return ReplicaSchedulerType.SPLITWISE
 
 @dataclass
 class MetricsConfig:
@@ -341,15 +356,15 @@ class MetricsConfig:
         metadata={"help": "Whether to write json trace."},
     )
     wandb_project: Optional[str] = field(
-        default=None,
+        default="",
         metadata={"help": "Weights & Biases project name."},
     )
     wandb_group: Optional[str] = field(
-        default=None,
+        default="",
         metadata={"help": "Weights & Biases group name."},
     )
     wandb_run_name: Optional[str] = field(
-        default=None,
+        default="default",
         metadata={"help": "Weights & Biases run name."},
     )
     wandb_sweep_id: Optional[str] = field(
@@ -488,6 +503,14 @@ class LORGlobalSchedulerConfig(BaseGlobalSchedulerConfig):
     @staticmethod
     def get_type():
         return GlobalSchedulerType.LOR
+
+
+@dataclass
+class SplitwiseGlobalSchedulerConfig(BaseGlobalSchedulerConfig):
+
+    @staticmethod
+    def get_type():
+        return GlobalSchedulerType.SPLITWISE
 
 
 @dataclass

@@ -1,4 +1,6 @@
-from vidur.entities.batch import Batch
+from typing import List
+
+from vidur.entities.batch import Batch, Request
 from vidur.scheduler.replica_scheduler.base_replica_scheduler import (
     BaseReplicaScheduler,
 )
@@ -11,7 +13,7 @@ class OrcaReplicaScheduler(BaseReplicaScheduler):
         self._preempted_requests = []
         self._num_running_batches = 0
 
-    def on_batch_end(self, batch: Batch) -> None:
+    def on_batch_end(self, batch: Batch) -> List[Request]:
         self._num_running_batches -= 1
 
         for request in batch.requests:
@@ -19,6 +21,7 @@ class OrcaReplicaScheduler(BaseReplicaScheduler):
                 self.free(request.id)
             else:
                 self._preempted_requests.append(request)
+        return []
 
     def _get_next_batch(self) -> Batch:
         requests = []

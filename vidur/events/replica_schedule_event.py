@@ -25,6 +25,12 @@ class ReplicaScheduleEvent(BaseEvent):
         replica_scheduler = scheduler.get_replica_scheduler(self._replica_id)
         self._batches = replica_scheduler.on_schedule()
 
+        with open("events.txt", "a") as f:
+            f.write(
+                f"ReplicaScheduleEvent ({self._id}): time={self.time}, replica_id={self._replica_id}, "
+                f"batches_scheduled={len(self._batches)}, _num_running_batches={replica_scheduler._num_running_batches}"
+            )
+            f.write("\n")
         if not self._batches:
             return []
 

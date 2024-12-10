@@ -57,6 +57,13 @@ class BatchStageEndEvent(BaseEvent):
             ),
         ]
 
+        with open("events.txt", "a") as f:
+            f.write(
+                f"BatchStageEndEvent ({self._id}): time={self.time}, replica_id={self._replica_id}, "
+                f"stage_id={self._stage_id}, is_last_stage={self._is_last_stage}, "
+                f"batch_id={self._batch.id}, batch_stage_id={self._batch_stage.id}"
+            )
+            f.write("\n")
         if self._is_last_stage:
             return next_events + [
                 BatchEndEvent(self.time, self._replica_id, self._batch)

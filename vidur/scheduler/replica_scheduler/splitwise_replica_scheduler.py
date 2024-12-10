@@ -1,13 +1,21 @@
-from math import ceil
+from abc import ABC, abstractmethod
 from typing import List
 
-from vidur.entities.batch import Batch, Request
-from vidur.scheduler.replica_scheduler.base_replica_scheduler import (
-    BaseReplicaScheduler,
-)
+from vidur.config import SimulationConfig
+from vidur.entities import Batch, Replica, Request
+from vidur.execution_time_predictor import BaseExecutionTimePredictor
+from vidur.logger import init_logger
+from vidur.scheduler.replica_stage_scheduler import ReplicaStageScheduler
+from vidur.scheduler.utils.memory_planner import MemoryPlanner
+from vidur.scheduler.replica_scheduler.base_replica_scheduler import BaseReplicaScheduler
+
+from math import ceil
 
 
-class VLLMReplicaScheduler(BaseReplicaScheduler):
+logger = init_logger(__name__)
+
+
+class SplitwiseReplicaScheduler(BaseReplicaScheduler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -19,19 +27,37 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
         self._watermark_blocks = int(
             self._config.watermark_blocks_fraction * self._config.num_blocks
         )
+        self._is_prefill = None
+
+    @property
+    def is_prefill(self) -> bool:
+        return self._is_prefill
+
+    def set_prefill(self, is_prefill: bool) -> None:
+        self._is_prefill = is_prefill
+        for stage_scheduler in self._replica_stage_schedulers.values():
+            stage_scheduler.set_prefill(is_prefill)
 
     def on_batch_end(self, batch: Batch) -> List[Request]:
         self._num_running_batches -= 1
+        prefill_complete_requests = []
+        unfinished_requests = []
 
         for request in batch.requests:
-            if request.completed:
-                self.free(request.id)
+            if self.is_prefill:
+                prefill_complete_requests = [r for r in batch.requests if r.is_prefill_complete]
+                if request.is_prefill_complete:
+                    self.free(request.id)
             else:
-                self._preempted_requests.append(request)
-        return []
+                if request.completed:
+                    self.free(request.id)
+                else:
+                    unfinished_requests.append(request)
+        return prefill_complete_requests
 
     def _can_allocate_request(self, request: Request) -> bool:
-        if request.id not in self._allocation_map:
+        # if request.id not in self._allocation_map:
+        if self.is_prefill:
             # new request
             num_required_blocks = ceil(
                 (request.num_prefill_tokens) / self._config.block_size
@@ -47,7 +73,8 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
         return self._config.num_blocks - self._num_allocated_blocks >= 1
 
     def _allocate_request(self, request: Request) -> None:
-        if request.id not in self._allocation_map:
+        # if request.id not in self._allocation_map:
+        if self.is_prefill:
             # new request
             num_required_blocks = ceil(
                 (request.num_prefill_tokens) / self._config.block_size
@@ -55,14 +82,14 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
             self.allocate(request.id, num_required_blocks)
             return
 
-        num_tokens_reserved = self._allocation_map[request.id] * self._config.block_size
-        num_tokens_required = max(0, request.num_processed_tokens - num_tokens_reserved)
-        assert (
-            num_tokens_required == 0 or num_tokens_required == 1
-        ), f"num_tokens_required: {num_tokens_required}"
+        # num_tokens_reserved = self._allocation_map[request.id] * self._config.block_size
+        # num_tokens_required = max(0, request.num_processed_tokens - num_tokens_reserved)
+        # assert (
+        #     num_tokens_required == 0 or num_tokens_required == 1
+        # ), f"num_tokens_required: {num_tokens_required}"
 
-        if num_tokens_required == 0:
-            return
+        # if num_tokens_required == 0:
+        #     return
 
         self.allocate(request.id, 1)
 
@@ -70,6 +97,19 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
         requests = []
         num_tokens = []
         num_batch_tokens = 0
+        unfinished_decode_requests = []
+
+        if not self.is_prefill:
+            for request_id in self._allocation_map.keys():
+                if any(request._id == request_id for request in self._request_queue):
+                    index = next(i for i, request in enumerate(self._request_queue) if request._id == request_id)
+                    request = self._request_queue.pop(index)
+                    if request.total_tokens - request.num_processed_tokens > 1: 
+                        unfinished_decode_requests.append(request)
+                    requests.append(request)
+                    next_num_tokens = self._get_request_next_num_tokens(request)
+                    num_tokens.append(next_num_tokens)
+                    num_batch_tokens += next_num_tokens
 
         while self._request_queue:
             request = self._request_queue[0]
@@ -91,13 +131,22 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
                 break
 
             request = self._request_queue.pop(0)
+            # If this scheduler instance is decode, then check if the request will have 
+            # generated all decode tokens after processing this request. If not, then add 
+            # it back to the request queue after mapping.
+            if not self.is_prefill:
+                if request.total_tokens - request.num_processed_tokens > 1: 
+                    unfinished_decode_requests.append(request)
 
             self._allocate_request(request)
             requests.append(request)
             num_tokens.append(next_num_tokens)
             num_batch_tokens += next_num_tokens
+        self._request_queue = unfinished_decode_requests + self._request_queue
 
         if requests:
+            # if not self.is_prefill:
+            #     print("decode return in middle, len(requests): ", len(requests), "num_batch_tokens: ", len(num_tokens) * max(num_tokens))
             return Batch(self._replica_id, requests, num_tokens)
 
         # Safer to sort preempted_requests to maintain FIFO order
@@ -129,4 +178,6 @@ class VLLMReplicaScheduler(BaseReplicaScheduler):
         if not requests:
             return
 
+        # if not self.is_prefill:
+        #     print("decode return at end, len(requests): ", len(requests), "num_batch_tokens: ", len(num_tokens) * max(num_tokens))
         return Batch(self._replica_id, requests, num_tokens)

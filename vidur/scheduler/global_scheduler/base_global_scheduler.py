@@ -41,7 +41,10 @@ class BaseGlobalScheduler(ABC):
         self._request_queue.sort(key=lambda request: request._arrived_at)
 
     def add_request(self, request: Request) -> None:
-        self._request_queue.append(request)
+        if not any(req._id == request._id for req in self._request_queue):
+            self._request_queue.append(request)
+        # else:
+        #     print("Request already in queue for global scheduler")
 
     def get_replica_scheduler(self, replica_id: int):
         return self._replica_schedulers[replica_id]

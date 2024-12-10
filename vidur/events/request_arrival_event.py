@@ -24,6 +24,9 @@ class RequestArrivalEvent(BaseEvent):
         logger.debug(f"Request: {self._request.id} arrived at {self.time}")
         scheduler.add_request(self._request)
         metrics_store.on_request_arrival(self.time, self._request)
+
+        with open("events.txt", "a") as f:
+            f.write(f"Handling RequestArrivalEvent ({self._id}) for request {self._request.id} at time {self.time}\n")
         return [GlobalScheduleEvent(self.time)]
 
     def to_dict(self) -> dict:

@@ -35,7 +35,7 @@ class Batch(BaseEntity):
     ) -> None:
         self._id = Batch.generate_id()
         self._replica_id = replica_id
-
+        # TODO: Handle the prefill/decode tokens for splitwise
         self._requests = requests
         self._num_tokens = num_tokens
         self._total_num_tokens = sum(num_tokens)
@@ -47,7 +47,7 @@ class Batch(BaseEntity):
         )
 
         self._total_num_tokens_rounded = (self._total_num_tokens + 7) // 8 * 8
-
+        # print(f"Batch ID: {self._id}, Replica ID: {self._replica_id} Total num tokens: {self._total_num_tokens}, rounded: {self._total_num_tokens_rounded}, prefill: {self._num_prefill_tokens}")
         self._scheduled_at = None
         self._completed_at = None
         self._scheduled = False

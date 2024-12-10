@@ -60,20 +60,23 @@ class Simulator:
         logger.info(
             f"Starting simulation with cluster: {self._cluster} and {len(self._event_queue)} requests"
         )
+        with open("events.txt", "w") as f:
+            f.truncate(0)
+        with open("event_queue.txt", "w") as f:
+            while self._event_queue and not self._terminate:
+                _, event = heapq.heappop(self._event_queue)
+                f.write(f"{event._priority_number}, {event._event_type}\n")
+                self._set_time(event._time)
+                new_events = event.handle_event(self._scheduler, self._metric_store)
+                self._add_events(new_events)
 
-        while self._event_queue and not self._terminate:
-            _, event = heapq.heappop(self._event_queue)
-            self._set_time(event._time)
-            new_events = event.handle_event(self._scheduler, self._metric_store)
-            self._add_events(new_events)
+                if self._config.metrics_config.write_json_trace:
+                    self._event_trace.append(event.to_dict())
 
-            if self._config.metrics_config.write_json_trace:
-                self._event_trace.append(event.to_dict())
-
-            if self._config.metrics_config.enable_chrome_trace:
-                chrome_trace = event.to_chrome_trace()
-                if chrome_trace:
-                    self._event_chrome_trace.append(chrome_trace)
+                if self._config.metrics_config.enable_chrome_trace:
+                    chrome_trace = event.to_chrome_trace()
+                    if chrome_trace:
+                        self._event_chrome_trace.append(chrome_trace)
 
         assert self._scheduler.is_empty() or self._terminate
 
