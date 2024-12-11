@@ -12,6 +12,7 @@ schedulers:
     chunk_size: 256
   - scheduler: sarathi
     chunk_size: 4096
+  - scheduler: splitwise
 
 traces:
   - name: chat

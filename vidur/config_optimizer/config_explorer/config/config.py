@@ -38,7 +38,6 @@ class TraceConfig:
             "request_generator_config_type": "synthetic",
             "length_generator_config_type": "trace",
             "interval_generator_config_type": "poisson",
-            "synthetic_request_generator_config_max_tokens": self.max_seq_len,
             "trace_request_length_generator_config_max_tokens": self.max_seq_len,
             "zipf_request_length_generator_config_max_tokens": self.max_seq_len,
             "uniform_request_length_generator_config_max_tokens": self.max_seq_len,
@@ -49,6 +48,7 @@ class TraceConfig:
             "trace_request_length_generator_config_decode_scale_factor": 1,
             "synthetic_request_generator_config_num_requests": self.num_requests,
             "vllm_scheduler_config_max_tokens_in_batch": self.max_seq_len,
+            "splitwise_scheduler_config_max_tokens_in_batch": self.max_seq_len,
         }
 
 
@@ -85,12 +85,16 @@ class SchedulerConfig:
             return {
                 "replica_scheduler_config_type": "vllm",
             }
+        elif self.scheduler == "sarathi":
+            assert self.chunk_size is not None
+            return {
+                "replica_scheduler_config_type": "sarathi",
+                "sarathi_scheduler_config_chunk_size": self.chunk_size,
+            }
 
-        assert self.scheduler == "sarathi"
-        assert self.chunk_size is not None
+        assert self.scheduler == "splitwise"
         return {
-            "replica_scheduler_config_type": "sarathi",
-            "sarathi_scheduler_config_chunk_size": self.chunk_size,
+            "replica_scheduler_config_type": "splitwise",
         }
 
 

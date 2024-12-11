@@ -56,7 +56,6 @@ class BaseReplicaScheduler(ABC):
         self._allocation_map = {}
 
         if self._config.get_type() != ReplicaSchedulerType.SPLITWISE:
-            print("Not Splitwise")
             self._replica_stage_schedulers = {
                 stage_id: ReplicaStageScheduler(
                     replica.id,
