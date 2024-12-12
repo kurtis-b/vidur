@@ -61,11 +61,11 @@ if __name__ == "__main__":
     assert Path(args.cache_dir).exists()
     assert Path(args.output_dir).exists()
 
-    if os.listdir(args.output_dir):
-        original_output_dir = args.output_dir
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        args.output_dir = f"{original_output_dir}_{timestamp}"
-        logger.info(f"Output directory is not empty. Using new directory: {args.output_dir}")
+    # if os.listdir(args.output_dir):
+    #     original_output_dir = args.output_dir
+    #     timestamp = time.strftime("%Y%m%d-%H%M%S")
+    #     args.output_dir = f"{original_output_dir}_{timestamp}"
+    #     logger.info(f"Output directory is not empty. Using new directory: {args.output_dir}")
         
     config = yaml.safe_load(open(args.config_path))
 

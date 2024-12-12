@@ -34,7 +34,7 @@ if __name__ == "__main__":
         python -m vidur.config_optimizer.analyzer.stats_extractor --sim-results-dir C:/<PATH TO PROJECT>/<OUTPUT_DIR> for Windows
 
     To generate a dashboard for the analysis, run the following command:
-        python -m streamlit run /config_optimizer/analyzer/dashboard/main.py -- --sim-results-dir <OUTPUT_DIR> for Linux
-        python -m streamlit run C:/<PATH TO PROJECT>/config_optimizer/analyzer/dashboard/main.py -- --sim-results-dir C:/<PATH TO PROJECT>/<OUTPUT_DIR>/ for Windows
+        python -m streamlit run /vidur/config_optimizer/analyzer/dashboard/main.py -- --sim-results-dir <OUTPUT_DIR> for Linux
+        python -m streamlit run C:/<PATH TO PROJECT>/vidur/config_optimizer/analyzer/dashboard/main.py -- --sim-results-dir C:/<PATH TO PROJECT>/<OUTPUT_DIR>/ for Windows
     """
     main()

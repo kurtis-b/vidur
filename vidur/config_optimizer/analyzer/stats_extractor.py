@@ -166,22 +166,19 @@ def process_run(run_dir: str):
 
 
 def get_sim_time(sim_results_dir: str):
-    run_dirs = glob.glob(f"{sim_results_dir}/runs/*/*/*/")
+    run_dirs = glob.glob(f"{sim_results_dir}/runs/*/*/")
     times = []
 
     for run_dir in run_dirs:
-        folder_name = os.path.basename(os.path.normpath(run_dir))
-        time_part = folder_name.split('_')[1]
-        hour, minute, second, _ = map(int, time_part.split('-'))
-        times.append(hour * 3600 + minute * 60 + second)
-
-    if not times:
-        return 0.0
-
-    earliest_time = min(times)
-    latest_time = max(times)
-
-    return (latest_time - earliest_time) / 3600.0
+        output_log_file = os.path.join(run_dir, "output.log")
+        if os.path.exists(output_log_file):
+            with open(output_log_file, "r") as f:
+                for line in f:
+                    if "INFO" in line and "Simulation ended at:" in line:
+                        time_str = line.split("Simulation ended at:")[1].strip().replace('s', '')
+                        times.append(float(time_str))
+                        
+    return sum(times)
 
 
 def process_trace(sim_results_dir: str):

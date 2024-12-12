@@ -43,7 +43,7 @@ traces:
     num_requests: 512
     start_qps: 16
 
-batch_sizes: [64, 128]
+batch_sizes: [64, 128, 256]
 tp_dimensions: [1, 2, 4]
 pp_dimensions: [1, 2]
 
