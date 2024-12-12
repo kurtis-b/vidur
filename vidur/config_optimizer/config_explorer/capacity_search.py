@@ -3,6 +3,7 @@ import glob
 import os
 import platform
 import shlex
+import sys
 from subprocess import Popen
 
 import pandas as pd
@@ -52,7 +53,11 @@ class CapacitySearch:
         if self.cpu_core_id is not None and platform.system() != "Darwin":
             cpu_affinity_command = f"taskset --cpu-list {self.cpu_core_id}"
 
-        command = f"nice -n 1 {cpu_affinity_command} python -m vidur.main {scheduler_config.to_args()}"
+        if os.name == "nt": # Check if the OS is Windows
+            sys_executable = sys.executable.replace('\\','/')
+            command = rf"START /WAIT /b {sys_executable} -m vidur.main {scheduler_config.to_args()}"
+        else:
+            command = f"nice -n 1 {cpu_affinity_command} python -m vidur.main {scheduler_config.to_args()}"
         logger.debug(f"Running command: {command}")
 
         return command
@@ -108,7 +113,10 @@ class CapacitySearch:
 
         try:
             args = shlex.split(command)
-            p = Popen(args, stdout=output_file, stderr=output_file)
+            if os.name == "nt": # Check if the OS is Windows
+                p = Popen(args, stdout=output_file, stderr=output_file, shell=True)
+            else:
+                p = Popen(args, stdout=output_file, stderr=output_file)
             p.wait()
 
             result_file = self._get_result_file(run_dir)
@@ -176,6 +184,7 @@ class CapacitySearch:
 
         self.release_cpu_core_id()
 
+        print(f"Returning with max_qps_under_sla: {max_qps_under_sla}")
         return {
             **self.job_config.to_config_dict(),
             "max_qps_under_sla": max_qps_under_sla,

@@ -29,5 +29,9 @@ def get_trace_name(trace_file: str) -> str:
         return "Chat1M"
     elif "bwb" in trace_file:
         return "BWB"
+    elif "splitwise_conv" in trace_file:
+        return "SplitwiseChat"
+    elif "splitwise_code" in trace_file:
+        return "SplitwiseCode"
     else:
         return trace_file.split("/")[-1].split(".")[0]

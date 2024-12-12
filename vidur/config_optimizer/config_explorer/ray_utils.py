@@ -9,7 +9,7 @@ import ray
 
 def get_ip() -> str:
     # special handling for macos
-    if platform.system() == "Darwin":
+    if platform.system() == "Darwin" or platform.system() == "Windows":
         return "127.0.0.1"
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -65,9 +65,12 @@ class CpuAssignmentManager:
                 if not is_core_assigned:
                     self._core_mapping[node][i] = True
                     return node, i
+        # print("current self._core_mapping", self._core_mapping)
         return None, None
 
     def release_cpu_core_id(self, node: str, cpu_core_id: int) -> None:
+        print("release_cpu_core_id", node, cpu_core_id)
+        print("self._core_mapping after release", self._core_mapping)
         self._core_mapping[node][cpu_core_id] = False
 
 
@@ -88,8 +91,10 @@ class RayParallelRunner:
                 node, cpu_core_id = ray.get(
                     self._cpu_assignment_manager.get_cpu_core_id.remote()
                 )
+                # print("returned node, cpu_core_id", node, cpu_core_id)
                 time.sleep(0.1)
             # launch the task
+            print("launching task on node", node, "cpu_core_id", cpu_core_id, "for item:", item.get_human_readable_name())
             promise = remote_func.options(resources={f"node:{node}": 0.001}).remote(
                 self._cpu_assignment_manager, cpu_core_id, item
             )

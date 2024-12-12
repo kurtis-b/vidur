@@ -548,7 +548,7 @@ class BaseExecutionTimePredictorConfig(BasePolyConfig):
         metadata={"help": "KV cache prediction granularity."},
     )
     prediction_max_prefill_chunk_size: int = field(
-        default=4096,
+        default=8192,
         metadata={"help": "Max prefill chunk size for prediction."},
     )
     prediction_max_batch_size: int = field(
@@ -556,7 +556,7 @@ class BaseExecutionTimePredictorConfig(BasePolyConfig):
         metadata={"help": "Max batch size for prediction."},
     )
     prediction_max_tokens_per_request: int = field(
-        default=4096,
+        default=8192,
         metadata={"help": "Max tokens per request for prediction."},
     )
     attention_decode_batching_overhead_fraction: float = field(

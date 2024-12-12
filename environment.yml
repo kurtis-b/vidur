@@ -2,6 +2,7 @@ name: vidur
 channels:
   - conda-forge
   - plotly
+  - nodefaults
 dependencies:
   - python=3.10
   - setuptools
@@ -20,6 +21,6 @@ dependencies:
   - streamlit
   - randomname
   - pip:
-    - kaleido
-    - ddsketch
-    - paretoset
+      - kaleido==0.2.1
+      - ddsketch
+      - paretoset

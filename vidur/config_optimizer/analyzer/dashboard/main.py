@@ -99,14 +99,14 @@ def prepare_subset_dfs(_args):
     df["capacity_per_dollar"] = df.apply(update_capacity_per_dollar, axis=1)
 
     # map the trace file to a human readable name
-    df["Trace"] = df["trace_request_length_generator_trace_file"].apply(get_trace_name)
+    df["Trace"] = df["Trace"].apply(get_trace_name)
     # map axis columns with human readable names
     df = df.rename(columns=AXIS_COLS)
     # replace scheduler and SKU names with human readable names
     df["Scheduler"] = df["Scheduler"].replace(PRETTY_NAMES)
     df["SKU"] = df["SKU"].replace(PRETTY_NAMES)
 
-    df["Model"] = df["replica_model_name"].str.split("/").str[1]
+    df["Model"] = df["Model"].str.split("/").str[1]
     df["Model"] = df["Model"].str.replace("-Instruct-hf", "")
     df["Model"] = df["Model"].str.replace("-hf", "")
 

@@ -14,6 +14,7 @@ import time
 
 import yaml
 
+from pathlib import Path
 from vidur.config_optimizer.config_explorer.config_explorer import ConfigExplorer
 from vidur.logger import init_logger
 
@@ -48,6 +49,7 @@ def get_args():
         args.num_threads = min(args.num_threads, default_num_threads)
     else:
         args.num_threads = default_num_threads
+    logger.info(f"Using {args.num_threads} threads")
 
     return args
 
@@ -55,6 +57,16 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
+    assert Path(args.config_path).exists()
+    assert Path(args.cache_dir).exists()
+    assert Path(args.output_dir).exists()
+
+    if os.listdir(args.output_dir):
+        original_output_dir = args.output_dir
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        args.output_dir = f"{original_output_dir}_{timestamp}"
+        logger.info(f"Output directory is not empty. Using new directory: {args.output_dir}")
+        
     config = yaml.safe_load(open(args.config_path))
 
     assert (

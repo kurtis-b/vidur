@@ -45,6 +45,7 @@ PRETTY_NAMES = {
     "sarathi": "Sarathi-Serve",
     "orca+": "Orca+",
     "vllm": "vLLM",
+    "splitwise": "Splitwise",
     "h100": "H100",
     "a100": "A100",
     "a40": "A40",
@@ -70,5 +71,13 @@ COLORS = [
     "#8c564b",
     "#e377c2",
     "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+    "#aec7e8",
+    "#ffbb78",
+    "#98df8a",
+    "#ff9896",
+    "#c5b0d5",
+    "#c49c94",
 ]
 TRANS_COLORS = [c + "95" for c in COLORS]

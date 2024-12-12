@@ -2,6 +2,7 @@ import hashlib
 from dataclasses import dataclass
 from itertools import product
 from typing import List, Optional
+import os
 
 
 @dataclass
@@ -34,6 +35,8 @@ class TraceConfig:
         return f"{self.name}_tk{self.max_seq_len}_rq{self.num_requests}"
 
     def to_config_dict(self):
+        if os.name == "nt":
+            self.trace_file = self.trace_file.replace("./", os.getcwd().replace("\\", "/") + "/")
         return {
             "request_generator_config_type": "synthetic",
             "length_generator_config_type": "trace",
@@ -84,17 +87,20 @@ class SchedulerConfig:
         if self.scheduler == "vllm":
             return {
                 "replica_scheduler_config_type": "vllm",
+                "global_scheduler_config_type": "lor"
             }
         elif self.scheduler == "sarathi":
             assert self.chunk_size is not None
             return {
                 "replica_scheduler_config_type": "sarathi",
                 "sarathi_scheduler_config_chunk_size": self.chunk_size,
+                "global_scheduler_config_type": "lor"
             }
 
         assert self.scheduler == "splitwise"
         return {
             "replica_scheduler_config_type": "splitwise",
+            "global_scheduler_config_type": "splitwise"
         }
 
 

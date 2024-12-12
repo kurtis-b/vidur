@@ -80,7 +80,7 @@ def extract_utilization_stats(run_dir: str, stat_name: str):
 
 
 def process_run(run_dir: str):
-    config_file = f"{run_dir}/config.yml"
+    config_file = f"{run_dir}/config.json"
     request_metrics_file = f"{run_dir}/request_metrics.csv"
     tbt_file = f"{run_dir}/plots/batch_execution_time.csv"
     ttft_file = f"{run_dir}/plots/prefill_e2e_time.csv"
@@ -92,7 +92,8 @@ def process_run(run_dir: str):
 
     try:
         with open(config_file, "r") as f:
-            config = yaml.safe_load(f)
+            json_data = json.load(f)
+            config = yaml.safe_load(json.dumps(json_data))
 
         request_metrics_df = pd.read_csv(request_metrics_file)
         tbt_df = pd.read_csv(tbt_file)
@@ -138,10 +139,10 @@ def process_run(run_dir: str):
     runtime = request_completion_time_series_df["Time (sec)"].max()
 
     if (
-        config["replica_scheduler_provider"] == "sarathi"
-        and config["sarathi_scheduler_chunk_size"] == 4096
+        config["cluster_config"]["replica_scheduler_config"]["name"] == "sarathi"
+        and config["cluster_config"]["replica_scheduler_config"]["max_tokens_in_batch"] == 4096
     ):
-        config["replica_scheduler_provider"] = "orca+"
+        config["cluster_config"]["replica_scheduler_config"]["name"] = "orca+"
 
     config.update(
         {
@@ -165,15 +166,22 @@ def process_run(run_dir: str):
 
 
 def get_sim_time(sim_results_dir: str):
-    output_file = f"{sim_results_dir}/output.log"
+    run_dirs = glob.glob(f"{sim_results_dir}/runs/*/*/*/")
+    times = []
 
-    with open(output_file, "r") as f:
-        lines = f.readlines()
+    for run_dir in run_dirs:
+        folder_name = os.path.basename(os.path.normpath(run_dir))
+        time_part = folder_name.split('_')[1]
+        hour, minute, second, _ = map(int, time_part.split('-'))
+        times.append(hour * 3600 + minute * 60 + second)
 
-    # search for Simulation took time: xxx
-    for line in lines:
-        if "Simulation took time" in line:
-            return float(line.split(":")[-1].strip())
+    if not times:
+        return 0.0
+
+    earliest_time = min(times)
+    latest_time = max(times)
+
+    return (latest_time - earliest_time) / 3600.0
 
 
 def process_trace(sim_results_dir: str):
@@ -198,8 +206,28 @@ def process_trace(sim_results_dir: str):
     # filer out None values
     all_results = [r for r in all_results if r is not None]
     logger.info(f"Total number of runs: {len(run_dirs)} valid runs: {len(all_results)}")
+    print(f"Total number of runs: {len(run_dirs)} valid runs: {len(all_results)}")
 
     df = pd.DataFrame(all_results)
+    original_row_count = len(df)
+    df = df[df["ttft_cdf"].apply(lambda x: len(x) > 0)]
+    new_row_count = len(df)
+    logger.info(f"Filtered out {original_row_count - new_row_count} runs with empty ttft_cdf")
+    print(f"Filtered out {original_row_count - new_row_count} runs with empty ttft_cdf")
+
+    # Add columns for the config values that will be used to do processing
+    df["replica_device"] = df["cluster_config"].apply(lambda x: x.get("replica_config")).apply(lambda x: x.get("device"))
+    df["cluster_num_replicas"] = df["cluster_config"].apply(lambda x: x.get("num_replicas"))
+    df["replica_num_tensor_parallel_workers"] = df["cluster_config"].apply(lambda x: x.get("replica_config")).apply(lambda x: x.get("tensor_parallel_size"))
+    df["replica_num_pipeline_stages"] = df["cluster_config"].apply(lambda x: x.get("replica_config")).apply(lambda x: x.get("num_pipeline_stages"))
+    df["poisson_request_interval_generator_qps"] = df["request_generator_config"].apply(lambda x: x.get("interval_generator_config")).apply(lambda x: x.get("qps"))
+    df["Trace"] = df["request_generator_config"].apply(lambda x: x.get("length_generator_config")).apply(lambda x: x.get("trace_file"))
+    df["Model"] = df["cluster_config"].apply(lambda x: x.get("replica_config")).apply(lambda x: x.get("model_config")).apply(lambda x: x.get("name"))
+    df["replica_scheduler_provider"] = df["cluster_config"].apply(lambda x: x.get("replica_scheduler_config")).apply(lambda x: x.get("name"))
+    df["replica_scheduler_batch_size_cap"] = df["cluster_config"].apply(lambda x: x.get("replica_scheduler_config")).apply(lambda x: x.get("batch_size_cap"))
+    df["sarathi_scheduler_chunk_size"] = df.apply(
+        lambda row: 0 if row["replica_scheduler_provider"] != "sarathi" else row["cluster_config"]["replica_scheduler_config"].get("chunk_size"), axis=1
+    )
 
     df["num_gpus"] = (
         df["cluster_num_replicas"]
